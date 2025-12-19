@@ -3,207 +3,544 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant Management System</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Restaurant System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #f5f5f5; }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        /* Header */
+        .header { 
+            background: #ff9700; 
+            color: white; 
+            padding: 20px; 
+            border-radius: 5px; 
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Tabs */
+        .tabs { 
+            background: white; 
+            display: flex; 
+            margin-bottom: 20px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .tab { 
+            padding: 15px 20px; 
+            cursor: pointer; 
+            background: white;
+            border: none;
+            border-right: 1px solid #ddd;
+            flex: 1;
+            text-align: center;
+        }
+        .tab.active { 
+            background: #ff9700; 
+            color: white; 
+            font-weight: bold;
+        }
+        
+        /* Tab Content */
+        .tab-content { 
+            display: none; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 5px;
+        }
+        .tab-content.active { display: block; }
+        
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            background: #ff9700;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover { background: #e68900; }
+        
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        /* Forms */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        
+        /* Tables Grid */
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .table-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-left: 5px solid #4CAF50;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .table-card.occupied { border-left-color: #f44336; }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="logo">
-                <i class="fas fa-utensils"></i>
-                <span id="restaurant-name">Restaurant Pro</span>
-            </div>
-            <div class="header-right">
-                <span id="current-time"></span>
-                <button class="btn btn-settings" onclick="openSettings()">
-                    <i class="fas fa-cog"></i> Settings
-                </button>
-            </div>
-        </header>
-
-        <nav class="tabs">
-            <button class="tab active" onclick="switchTab('tables')">
-                <i class="fas fa-chair"></i> Tables
-            </button>
-            <button class="tab" onclick="switchTab('menu')">
-                <i class="fas fa-book"></i> Menu
-            </button>
-            <button class="tab" onclick="switchTab('kitchen')">
-                <i class="fas fa-tv"></i> Kitchen
-            </button>
-            <button class="tab" onclick="switchTab('orders')">
-                <i class="fas fa-receipt"></i> Orders
-            </button>
-            <button class="tab" onclick="switchTab('checkout')">
-                <i class="fas fa-cash-register"></i> Checkout
-            </button>
-        </nav>
-
-        <!-- Tables Section -->
-        <section id="tables" class="tab-content active">
-            <div class="section-header">
-                <h2><i class="fas fa-chair"></i> Table Management</h2>
-                <div>
-                    <button class="btn btn-add" onclick="openAddTable()">
-                        <i class="fas fa-plus"></i> Add Table
-                    </button>
-                    <button class="btn btn-refresh" onclick="loadTables()">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                </div>
-            </div>
-            <div id="tables-list" class="grid"></div>
-        </section>
-
-        <!-- Menu Section -->
-        <section id="menu" class="tab-content">
-            <div class="section-header">
-                <h2><i class="fas fa-book"></i> Menu Management</h2>
-                <div>
-                    <button class="btn btn-add" onclick="openAddMenu()">
-                        <i class="fas fa-plus"></i> Add Item
-                    </button>
-                    <button class="btn btn-refresh" onclick="loadMenu()">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                </div>
-            </div>
-            <div id="menu-list"></div>
-        </section>
-
-        <!-- Kitchen Section -->
-        <section id="kitchen" class="tab-content">
-            <div class="section-header">
-                <h2><i class="fas fa-tv"></i> Kitchen Display</h2>
-                <div>
-                    <button class="btn" onclick="filterKitchen('pending')">Pending</button>
-                    <button class="btn" onclick="filterKitchen('ready')">Ready</button>
-                    <button class="btn" onclick="filterKitchen('all')">All</button>
-                    <button class="btn btn-refresh" onclick="loadKitchen()">
-                        <i class="fas fa-sync"></i>
-                    </button>
-                </div>
-            </div>
-            <div id="kitchen-orders" class="grid"></div>
-        </section>
-
-        <!-- Orders Section -->
-        <section id="orders" class="tab-content">
-            <div class="section-header">
-                <h2><i class="fas fa-receipt"></i> Active Orders</h2>
-                <button class="btn btn-refresh" onclick="loadOrders()">
-                    <i class="fas fa-sync"></i> Refresh
-                </button>
-            </div>
-            <div id="orders-list" class="grid"></div>
-        </section>
-
-        <!-- Checkout Section -->
-        <section id="checkout" class="tab-content">
-            <div class="section-header">
-                <h2><i class="fas fa-cash-register"></i> Checkout</h2>
-                <button class="btn btn-refresh" onclick="loadCheckout()">
-                    <i class="fas fa-sync"></i> Refresh
-                </button>
-            </div>
-            <div id="checkout-content"></div>
-        </section>
+        <div class="header">
+            <h1>Restaurant System</h1>
+            <button class="btn" onclick="openSettings()">Settings</button>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('tables')">Tables</button>
+            <button class="tab" onclick="showTab('menu')">Menu</button>
+            <button class="tab" onclick="showTab('kitchen')">Kitchen</button>
+            <button class="tab" onclick="showTab('orders')">Orders</button>
+            <button class="tab" onclick="showTab('checkout')">Checkout</button>
+        </div>
+        
+        <!-- Tables Tab -->
+        <div id="tables" class="tab-content active">
+            <h2>Table Management</h2>
+            <button class="btn" onclick="openAddTable()">Add Table</button>
+            <div class="tables-grid" id="tablesList"></div>
+        </div>
+        
+        <!-- Menu Tab -->
+        <div id="menu" class="tab-content">
+            <h2>Menu Management</h2>
+            <button class="btn" onclick="openAddMenu()">Add Menu Item</button>
+            <div id="menuList"></div>
+        </div>
+        
+        <!-- Kitchen Tab -->
+        <div id="kitchen" class="tab-content">
+            <h2>Kitchen Display</h2>
+            <div id="kitchenOrders"></div>
+        </div>
+        
+        <!-- Orders Tab -->
+        <div id="orders" class="tab-content">
+            <h2>Active Orders</h2>
+            <div id="ordersList"></div>
+        </div>
+        
+        <!-- Checkout Tab -->
+        <div id="checkout" class="tab-content">
+            <h2>Checkout</h2>
+            <div id="checkoutContent"></div>
+        </div>
     </div>
-
+    
     <!-- Settings Modal -->
-    <div id="settings-modal" class="modal">
+    <div id="settingsModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-cog"></i> Settings</h3>
-                <span class="close" onclick="closeModal('settings-modal')">&times;</span>
+            <h2>Settings</h2>
+            <div class="form-group">
+                <label>Google Sheets URL:</label>
+                <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec">
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Google Sheets API URL:</label>
-                    <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/.../exec">
-                    <small>Get from Google Apps Script → Deploy → Web App URL</small>
-                </div>
-                <div class="form-group">
-                    <label>Restaurant Name:</label>
-                    <input type="text" id="restaurant-name-input" placeholder="Your Restaurant Name">
-                </div>
-                <button class="btn btn-save" onclick="saveSettings()">Save Settings</button>
+            <div class="form-group">
+                <label>Restaurant Name:</label>
+                <input type="text" id="restaurantName" placeholder="Your Restaurant">
             </div>
+            <button class="btn" onclick="saveSettings()">Save Settings</button>
+            <button class="btn" onclick="closeSettings()" style="background: #666; margin-left: 10px;">Cancel</button>
         </div>
     </div>
-
+    
     <!-- Add Table Modal -->
-    <div id="add-table-modal" class="modal">
+    <div id="addTableModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-plus"></i> Add Table</h3>
-                <span class="close" onclick="closeModal('add-table-modal')">&times;</span>
+            <h2>Add Table</h2>
+            <div class="form-group">
+                <label>Table Number:</label>
+                <input type="text" id="tableNumber">
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Table Number:</label>
-                    <input type="text" id="table-number" placeholder="T01">
-                </div>
-                <div class="form-group">
-                    <label>Capacity:</label>
-                    <input type="number" id="table-capacity" value="4" min="1" max="20">
-                </div>
-                <button class="btn btn-add" onclick="addTable()">Add Table</button>
+            <div class="form-group">
+                <label>Capacity:</label>
+                <input type="number" id="tableCapacity" value="4">
             </div>
+            <button class="btn" onclick="addNewTable()">Add Table</button>
+            <button class="btn" onclick="closeAddTable()" style="background: #666; margin-left: 10px;">Cancel</button>
         </div>
     </div>
-
-    <!-- Add Menu Modal -->
-    <div id="add-menu-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-plus"></i> Add Menu Item</h3>
-                <span class="close" onclick="closeModal('add-menu-modal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Item Name:</label>
-                    <input type="text" id="menu-name" placeholder="Item Name">
-                </div>
-                <div class="form-group">
-                    <label>Category:</label>
-                    <input type="text" id="menu-category" placeholder="Category">
-                </div>
-                <div class="form-group">
-                    <label>Price:</label>
-                    <input type="number" id="menu-price" placeholder="Price">
-                </div>
-                <button class="btn btn-add" onclick="addMenuItem()">Add Item</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Order Modal -->
-    <div id="order-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="order-title"></h3>
-                <span class="close" onclick="closeModal('order-modal')">&times;</span>
-            </div>
-            <div id="order-details" class="modal-body"></div>
-        </div>
-    </div>
-
-    <!-- Payment Modal -->
-    <div id="payment-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-credit-card"></i> Payment</h3>
-                <span class="close" onclick="closeModal('payment-modal')">&times;</span>
-            </div>
-            <div id="payment-details" class="modal-body"></div>
-        </div>
-    </div>
-
+    
     <!-- Notification -->
-    <div id="notification"></div>
-
-    <script src="script.js"></script>
+    <div id="notification" class="notification"></div>
+    
+    <script>
+        // Global variables
+        let apiUrl = localStorage.getItem('apiUrl') || '';
+        let restaurantName = localStorage.getItem('restaurantName') || 'Restaurant';
+        let tables = [];
+        let menu = [];
+        let orders = [];
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            setInterval(loadData, 5000); // Refresh every 5 seconds
+        });
+        
+        // Tab switching - SIMPLE WORKING VERSION
+        function showTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).style.display = 'block';
+            document.getElementById(tabName).classList.add('active');
+            
+            // Mark button as active
+            event.currentTarget.classList.add('active');
+            
+            // Load data for this tab
+            switch(tabName) {
+                case 'tables':
+                    loadTables();
+                    break;
+                case 'menu':
+                    loadMenuItems();
+                    break;
+                case 'kitchen':
+                    loadKitchen();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+                case 'checkout':
+                    loadCheckout();
+                    break;
+            }
+        }
+        
+        // Settings functions
+        function openSettings() {
+            console.log('Opening settings');
+            document.getElementById('apiUrl').value = apiUrl;
+            document.getElementById('restaurantName').value = restaurantName;
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+        
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+        
+        function saveSettings() {
+            apiUrl = document.getElementById('apiUrl').value.trim();
+            restaurantName = document.getElementById('restaurantName').value.trim();
+            
+            localStorage.setItem('apiUrl', apiUrl);
+            localStorage.setItem('restaurantName', restaurantName);
+            
+            document.querySelector('h1').textContent = restaurantName + ' System';
+            
+            showNotification('Settings saved!');
+            closeSettings();
+            loadData();
+        }
+        
+        // Load all data
+        async function loadData() {
+            if (!apiUrl) {
+                openSettings();
+                return;
+            }
+            
+            try {
+                await loadTables();
+                await loadMenuItems();
+                await loadOrders();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+        
+        // Load tables
+        async function loadTables() {
+            if (!apiUrl) return;
+            
+            try {
+                const response = await fetch(apiUrl + '?action=getTables');
+                const data = await response.json();
+                
+                if (data.success) {
+                    tables = data.tables || [];
+                    displayTables();
+                }
+            } catch (error) {
+                console.log('Error loading tables:', error);
+            }
+        }
+        
+        function displayTables() {
+            const container = document.getElementById('tablesList');
+            if (!container) return;
+            
+            if (tables.length === 0) {
+                container.innerHTML = '<p>No tables found. Add your first table!</p>';
+                return;
+            }
+            
+            let html = '';
+            tables.forEach(table => {
+                html += `
+                    <div class="table-card ${table.status === 'occupied' ? 'occupied' : ''}">
+                        <h3>Table ${table.table_no}</h3>
+                        <p>Status: ${table.status}</p>
+                        <p>Capacity: ${table.capacity || 4} seats</p>
+                        <button class="btn" style="margin-top: 10px; padding: 5px 10px; background: #2196F3;">
+                            View
+                        </button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // Add table functions
+        function openAddTable() {
+            document.getElementById('tableNumber').value = '';
+            document.getElementById('tableCapacity').value = 4;
+            document.getElementById('addTableModal').style.display = 'flex';
+        }
+        
+        function closeAddTable() {
+            document.getElementById('addTableModal').style.display = 'none';
+        }
+        
+        async function addNewTable() {
+            const tableNo = document.getElementById('tableNumber').value.trim();
+            const capacity = document.getElementById('tableCapacity').value;
+            
+            if (!tableNo) {
+                showNotification('Please enter table number', 'error');
+                return;
+            }
+            
+            try {
+                const url = `${apiUrl}?action=addTable&tableNo=${tableNo}&capacity=${capacity}&status=vacant`;
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Table added successfully');
+                    closeAddTable();
+                    loadTables();
+                } else {
+                    showNotification(result.message || 'Error adding table', 'error');
+                }
+            } catch (error) {
+                showNotification('Error connecting to server', 'error');
+            }
+        }
+        
+        // Menu functions
+        function openAddMenu() {
+            showNotification('Add menu feature coming soon');
+        }
+        
+        async function loadMenuItems() {
+            if (!apiUrl) return;
+            
+            try {
+                const response = await fetch(apiUrl + '?action=getMenu');
+                const data = await response.json();
+                
+                if (data.success) {
+                    menu = data.menu || [];
+                    displayMenu();
+                }
+            } catch (error) {
+                console.log('Error loading menu:', error);
+            }
+        }
+        
+        function displayMenu() {
+            const container = document.getElementById('menuList');
+            if (!container) return;
+            
+            if (menu.length === 0) {
+                container.innerHTML = '<p>No menu items found</p>';
+                return;
+            }
+            
+            let html = '<div style="display: grid; gap: 10px; margin-top: 20px;">';
+            menu.forEach(item => {
+                html += `
+                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        <strong>${item.item_name}</strong> - ₹${item.price}
+                        <p style="color: #666; font-size: 14px;">${item.category}</p>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        // Orders functions
+        async function loadOrders() {
+            if (!apiUrl) return;
+            
+            try {
+                const response = await fetch(apiUrl + '?action=getOrders');
+                const data = await response.json();
+                
+                if (data.success) {
+                    orders = data.orders || [];
+                    displayOrders();
+                }
+            } catch (error) {
+                console.log('Error loading orders:', error);
+            }
+        }
+        
+        function displayOrders() {
+            const container = document.getElementById('ordersList');
+            if (!container) return;
+            
+            if (orders.length === 0) {
+                container.innerHTML = '<p>No active orders</p>';
+                return;
+            }
+            
+            let html = '<div style="display: grid; gap: 15px; margin-top: 20px;">';
+            orders.forEach(order => {
+                html += `
+                    <div style="padding: 15px; border: 1px solid #ddd; border-radius: 5px;">
+                        <strong>Order #${order.order_id?.substring(0, 8) || 'N/A'}</strong>
+                        <p>Table: ${order.table_no} | Status: ${order.status}</p>
+                        <p>Total: ₹${order.total_amount || 0}</p>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        // Kitchen functions
+        async function loadKitchen() {
+            if (!apiUrl) return;
+            
+            try {
+                const response = await fetch(apiUrl + '?action=getOrders&status=pending');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayKitchenOrders(data.orders || []);
+                }
+            } catch (error) {
+                console.log('Error loading kitchen orders:', error);
+            }
+        }
+        
+        function displayKitchenOrders(kitchenOrders) {
+            const container = document.getElementById('kitchenOrders');
+            if (!container) return;
+            
+            if (kitchenOrders.length === 0) {
+                container.innerHTML = '<p>No pending orders in kitchen</p>';
+                return;
+            }
+            
+            let html = '<div style="display: grid; gap: 15px; margin-top: 20px;">';
+            kitchenOrders.forEach(order => {
+                html += `
+                    <div style="padding: 15px; border: 2px solid #ff9800; border-radius: 5px;">
+                        <h3>Table ${order.table_no}</h3>
+                        <p>Order #${order.order_id?.substring(0, 6) || 'N/A'}</p>
+                        <button class="btn" style="background: #4CAF50;">Mark Ready</button>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+        
+        // Checkout functions
+        function loadCheckout() {
+            const container = document.getElementById('checkoutContent');
+            if (!container) return;
+            
+            container.innerHTML = `
+                <div style="margin-top: 20px;">
+                    <div style="background: #f9f9f9; padding: 20px; border-radius: 5px;">
+                        <h3>Today's Summary</h3>
+                        <p>Total Orders: ${orders.length}</p>
+                        <p>Total Revenue: ₹${orders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0)}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Notification function
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.background = type === 'error' ? '#f44336' : '#4CAF50';
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
