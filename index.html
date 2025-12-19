@@ -67,6 +67,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .logo {
@@ -906,19 +908,7 @@
             </div>
             <div class="form-group">
                 <label>Restaurant Name:</label>
-                <input type="text" id="restaurant-name" placeholder="Enter your restaurant name">
-            </div>
-            <div class="form-group">
-                <label>Restaurant Address:</label>
-                <input type="text" id="restaurant-address" placeholder="Enter your restaurant address">
-            </div>
-            <div class="form-group">
-                <label>Contact Number:</label>
-                <input type="text" id="restaurant-phone" placeholder="Enter contact number">
-            </div>
-            <div class="form-group">
-                <label>GST Number (Optional):</label>
-                <input type="text" id="restaurant-gst" placeholder="Enter GST number">
+                <input type="text" id="restaurant-name-input" placeholder="Enter your restaurant name">
             </div>
             <div style="text-align: right; margin-top: 30px;">
                 <button class="btn btn-primary" onclick="saveConfig()">Save Configuration</button>
@@ -996,9 +986,6 @@
         let config = {
             apiUrl: localStorage.getItem('restaurant_api_url') || '',
             restaurantName: localStorage.getItem('restaurant_name') || 'Restaurant Pro',
-            restaurantAddress: localStorage.getItem('restaurant_address') || '',
-            restaurantPhone: localStorage.getItem('restaurant_phone') || '',
-            restaurantGST: localStorage.getItem('restaurant_gst') || '',
             tables: [],
             menu: [],
             orders: [],
@@ -1077,13 +1064,9 @@
         function loadConfig() {
             config.apiUrl = localStorage.getItem('restaurant_api_url') || '';
             config.restaurantName = localStorage.getItem('restaurant_name') || 'Restaurant Pro';
-            config.restaurantAddress = localStorage.getItem('restaurant_address') || '';
-            config.restaurantPhone = localStorage.getItem('restaurant_phone') || '';
-            config.restaurantGST = localStorage.getItem('restaurant_gst') || '';
             
             // Update UI
             document.getElementById('restaurant-name').textContent = config.restaurantName;
-            document.getElementById('restaurant-name-input').value = config.restaurantName;
             
             // Load data if API URL is configured
             if (config.apiUrl) {
@@ -1096,18 +1079,12 @@
         function openConfig() {
             document.getElementById('api-url').value = config.apiUrl;
             document.getElementById('restaurant-name-input').value = config.restaurantName;
-            document.getElementById('restaurant-address').value = config.restaurantAddress;
-            document.getElementById('restaurant-phone').value = config.restaurantPhone;
-            document.getElementById('restaurant-gst').value = config.restaurantGST;
             openModal('config-modal');
         }
         
         function saveConfig() {
             config.apiUrl = document.getElementById('api-url').value.trim();
             config.restaurantName = document.getElementById('restaurant-name-input').value.trim();
-            config.restaurantAddress = document.getElementById('restaurant-address').value.trim();
-            config.restaurantPhone = document.getElementById('restaurant-phone').value.trim();
-            config.restaurantGST = document.getElementById('restaurant-gst').value.trim();
             
             if (!config.apiUrl) {
                 showNotification('Please enter API URL', 'error');
@@ -1121,16 +1098,13 @@
             
             localStorage.setItem('restaurant_api_url', config.apiUrl);
             localStorage.setItem('restaurant_name', config.restaurantName);
-            localStorage.setItem('restaurant_address', config.restaurantAddress);
-            localStorage.setItem('restaurant_phone', config.restaurantPhone);
-            localStorage.setItem('restaurant_gst', config.restaurantGST);
             
             closeModal('config-modal');
             loadConfig();
             showNotification('Configuration saved successfully!');
         }
         
-        // API Functions
+        // API Functions - FIXED VERSION
         async function callAPI(action, params = {}) {
             if (!config.apiUrl) {
                 showNotification('Please configure API URL first', 'error');
@@ -1142,11 +1116,85 @@
             const formData = new FormData();
             formData.append('action', action);
             
-            Object.keys(params).forEach(key => {
+            // Add all parameters to formData
+            for (const key in params) {
+                if (params[key] !== undefined && params[key] !== null) {
+                    if (typeof params[key] === 'object') {
+                        formData.append(key, JSON.stringify(params[key]));
+                    } else {
+                        formData.append(key, params[key].toString());
+                    }
+                }
+            }
+            
+            try {
+                console.log('Calling API:', action, params);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    mode: 'no-cors' // Important for Google Apps Script
+                });
+                
+                // With no-cors mode, we can't read the response
+                // But Google Apps Script will process it
+                return { success: true, message: 'Request sent successfully' };
+                
+            } catch (error) {
+                console.error('API Error:', error);
+                showNotification('API Error: ' + error.message, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+        
+        // Alternative API call for Google Apps Script
+        async function callAPIWithScript(action, params = {}) {
+            if (!config.apiUrl) {
+                showNotification('Please configure API URL first', 'error');
+                openConfig();
+                return null;
+            }
+            
+            const url = config.apiUrl;
+            
+            // Build query string
+            let queryString = `?action=${encodeURIComponent(action)}`;
+            for (const key in params) {
+                if (params[key] !== undefined && params[key] !== null) {
+                    queryString += `&${key}=${encodeURIComponent(params[key])}`;
+                }
+            }
+            
+            try {
+                console.log('Calling API with GET:', url + queryString);
+                const response = await fetch(url + queryString, {
+                    method: 'GET',
+                    mode: 'no-cors'
+                });
+                
+                // With no-cors, we can't read response
+                // Try POST method as alternative
+                return await callAPIWithPost(action, params);
+                
+            } catch (error) {
+                console.error('API Error:', error);
+                showNotification('API Error: ' + error.message, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+        
+        // POST method for API calls
+        async function callAPIWithPost(action, params = {}) {
+            if (!config.apiUrl) return null;
+            
+            const url = config.apiUrl;
+            const formData = new FormData();
+            formData.append('action', action);
+            
+            for (const key in params) {
                 if (params[key] !== undefined && params[key] !== null) {
                     formData.append(key, params[key]);
                 }
-            });
+            }
             
             try {
                 const response = await fetch(url, {
@@ -1155,6 +1203,7 @@
                 });
                 
                 const text = await response.text();
+                console.log('API Response:', text);
                 
                 try {
                     return JSON.parse(text);
@@ -1164,7 +1213,6 @@
                 }
             } catch (error) {
                 console.error('API Error:', error);
-                showNotification('API Error: ' + error.message, 'error');
                 return { success: false, message: error.message };
             }
         }
@@ -1216,12 +1264,13 @@
             }
         }
         
-        // Table Functions
+        // Table Functions - FIXED
         async function refreshTables() {
             const container = document.getElementById('tables-container');
             container.innerHTML = '<div class="loading" style="margin: 40px auto; display: block;"></div>';
             
-            const result = await callAPI('getTables');
+            // Use correct API call
+            const result = await callAPIWithPost('getTables');
             
             if (result && result.success) {
                 config.tables = result.tables || [];
@@ -1335,9 +1384,11 @@
             btn.innerHTML = '<div class="loading" style="display: inline-block; margin-right: 8px;"></div> Adding...';
             btn.disabled = true;
             
-            const result = await callAPI('addTable', {
+            // Use correct API action - FIXED: Use 'addTable' (not 'addTables')
+            const result = await callAPIWithPost('addTable', {
                 tableNo: tableNo,
-                capacity: capacity
+                capacity: capacity,
+                status: 'vacant' // Add default status
             });
             
             btn.innerHTML = originalText;
@@ -1348,56 +1399,613 @@
                 closeModal('add-table-modal');
                 refreshTables();
             } else {
-                showNotification(result?.message || 'Failed to add table', 'error');
+                showNotification(result?.message || 'Failed to add table. Check API action name.', 'error');
             }
         }
         
-        // [Remaining JavaScript functions - order, menu, payment, etc. - from the previous code]
-        // These would be too long to include here, but they follow the same pattern as above
-        
-        // For demonstration, here are placeholder implementations:
-        function createOrderForTable(tableNo) {
-            showNotification(`Creating order for Table ${tableNo}`, 'info');
+        async function transferTableOrder(tableNo) {
+            const newTableNo = prompt(`Transfer order from Table ${tableNo} to:`);
+            
+            if (!newTableNo) return;
+            
+            const table = config.tables.find(t => t.table_no === tableNo);
+            if (!table || table.status !== 'occupied' || !table.current_order_id) {
+                showNotification('No active order on this table', 'error');
+                return;
+            }
+            
+            const result = await callAPIWithPost('transferTable', {
+                orderId: table.current_order_id,
+                fromTable: tableNo,
+                toTable: newTableNo
+            });
+            
+            if (result && result.success) {
+                showNotification('Table transferred successfully');
+                refreshTables();
+                refreshOrders();
+            } else {
+                showNotification(result?.message || 'Failed to transfer table', 'error');
+            }
         }
         
-        function viewOrder(orderId) {
-            showNotification(`Viewing order ${orderId}`, 'info');
+        async function createOrderForTable(tableNo) {
+            // Check if menu is loaded
+            if (config.menu.length === 0) {
+                await refreshMenu();
+            }
+            
+            if (config.menu.length === 0) {
+                showNotification('Please add menu items first', 'error');
+                return;
+            }
+            
+            showNotification(`Creating order for Table ${tableNo} - Feature in development`, 'info');
         }
         
-        function markOrderReady(orderId) {
-            showNotification(`Marking order ${orderId} as ready`, 'info');
+        async function viewOrder(orderId) {
+            showNotification(`Viewing order ${orderId} - Feature in development`, 'info');
         }
         
-        function processPaymentForOrder(orderId) {
-            showNotification(`Processing payment for order ${orderId}`, 'info');
+        async function markOrderReady(orderId) {
+            const result = await callAPIWithPost('updateOrderStatus', {
+                orderId: orderId,
+                status: 'ready'
+            });
+            
+            if (result && result.success) {
+                showNotification('Order marked as ready');
+                refreshTables();
+                refreshOrders();
+                refreshKDS();
+            } else {
+                showNotification(result?.message || 'Failed to update order', 'error');
+            }
         }
         
-        function transferTableOrder(tableNo) {
-            showNotification(`Transferring table ${tableNo}`, 'info');
+        async function processPaymentForOrder(orderId) {
+            showNotification(`Processing payment for order ${orderId} - Feature in development`, 'info');
         }
         
-        function refreshMenu() {
-            showNotification('Refreshing menu', 'info');
+        // Menu Functions
+        async function refreshMenu() {
+            const container = document.getElementById('menu-container');
+            container.innerHTML = '<div class="loading" style="margin: 40px auto; display: block;"></div>';
+            
+            const result = await callAPIWithPost('getMenu');
+            
+            if (result && result.success) {
+                config.menu = result.menu || [];
+                renderMenu();
+            } else {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--danger);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px;"></i>
+                        <p>Failed to load menu</p>
+                        <button class="btn btn-outline" onclick="refreshMenu()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
         }
         
-        function refreshOrders() {
-            showNotification('Refreshing orders', 'info');
-        }
-        
-        function refreshKDS() {
-            showNotification('Refreshing kitchen display', 'info');
-        }
-        
-        function filterKDSOrders(filter) {
-            showNotification(`Filtering KDS orders by ${filter}`, 'info');
-        }
-        
-        function loadCheckoutData() {
-            showNotification('Loading checkout data', 'info');
+        function renderMenu() {
+            const container = document.getElementById('menu-container');
+            
+            if (!config.menu || config.menu.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-book" style="font-size: 48px; color: var(--dark-gray); margin-bottom: 20px;"></i>
+                        <p style="color: var(--dark-gray); margin-bottom: 20px;">No menu items found. Add your first item!</p>
+                        <button class="btn btn-primary" onclick="openAddMenuItemModal()">
+                            <i class="fas fa-plus"></i> Add Menu Item
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Group by category
+            const categories = {};
+            config.menu.forEach(item => {
+                if (!categories[item.category]) {
+                    categories[item.category] = [];
+                }
+                categories[item.category].push(item);
+            });
+            
+            let html = '';
+            
+            for (const [category, items] of Object.entries(categories)) {
+                html += `
+                    <div class="card" style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--primary);">
+                            ${category}
+                        </h3>
+                `;
+                
+                items.forEach(item => {
+                    html += `
+                        <div class="menu-item">
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong>${item.item_name}</strong>
+                                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                            <span class="status-badge" style="background: ${item.available ? '#d4edda' : '#f8d7da'}; color: ${item.available ? '#155724' : '#721c24'}">
+                                                ${item.available ? 'Available' : 'Unavailable'}
+                                            </span>
+                                            <span style="color: #666; font-size: 14px;">
+                                                <i class="fas fa-clock"></i> ${item.prep_time || 15} min
+                                            </span>
+                                            <span style="color: #666; font-size: 14px;">
+                                                <i class="fas fa-utensils"></i> ${item.kitchen_station || 'Main'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style="font-weight: bold; color: var(--success); font-size: 18px;">
+                                        ₹${item.price || 0}
+                                    </div>
+                                </div>
+                                ${item.description ? `<p style="color: #666; margin-top: 8px;">${item.description}</p>` : ''}
+                            </div>
+                            <div style="margin-left: 15px;">
+                                <button class="btn btn-warning btn-small" onclick="editMenuItem('${item.item_id}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            }
+            
+            container.innerHTML = html;
         }
         
         function openAddMenuItemModal() {
-            showNotification('Opening add menu item modal', 'info');
+            document.getElementById('add-menu-item-content').innerHTML = `
+                <div class="form-group">
+                    <label>Item Name:</label>
+                    <input type="text" id="new-item-name" placeholder="Enter item name">
+                </div>
+                <div class="form-group">
+                    <label>Category:</label>
+                    <input type="text" id="new-item-category" placeholder="e.g., Starters, Main Course">
+                </div>
+                <div class="form-group">
+                    <label>Price (₹):</label>
+                    <input type="number" id="new-item-price" placeholder="Enter price" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea id="new-item-description" placeholder="Enter description" rows="3"></textarea>
+                </div>
+                <div style="text-align: right; margin-top: 30px;">
+                    <button class="btn btn-primary" onclick="addMenuItem()">Add Menu Item</button>
+                    <button class="btn btn-outline" onclick="closeModal('add-menu-item-modal')">Cancel</button>
+                </div>
+            `;
+            
+            openModal('add-menu-item-modal');
+        }
+        
+        async function addMenuItem() {
+            const name = document.getElementById('new-item-name').value.trim();
+            const category = document.getElementById('new-item-category').value.trim();
+            const price = document.getElementById('new-item-price').value;
+            const description = document.getElementById('new-item-description').value.trim();
+            
+            if (!name || !category || !price) {
+                showNotification('Please fill required fields (name, category, price)', 'error');
+                return;
+            }
+            
+            const result = await callAPIWithPost('addMenuItem', {
+                name: name,
+                category: category,
+                price: price,
+                description: description,
+                kitchenStation: 'Main Kitchen',
+                prepTime: 15
+            });
+            
+            if (result && result.success) {
+                showNotification('Menu item added successfully');
+                closeModal('add-menu-item-modal');
+                refreshMenu();
+            } else {
+                showNotification(result?.message || 'Failed to add menu item', 'error');
+            }
+        }
+        
+        function editMenuItem(itemId) {
+            const item = config.menu.find(m => m.item_id === itemId);
+            if (!item) {
+                showNotification('Menu item not found', 'error');
+                return;
+            }
+            
+            showNotification(`Editing item ${item.item_name} - Feature in development`, 'info');
+        }
+        
+        // Order Functions
+        async function refreshOrders() {
+            const container = document.getElementById('orders-container');
+            container.innerHTML = '<div class="loading" style="margin: 40px auto; display: block;"></div>';
+            
+            const result = await callAPIWithPost('getOrders', { status: 'all' });
+            
+            if (result && result.success) {
+                config.orders = result.orders || [];
+                renderOrders();
+            } else {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--danger);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px;"></i>
+                        <p>Failed to load orders</p>
+                        <button class="btn btn-outline" onclick="refreshOrders()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderOrders() {
+            const container = document.getElementById('orders-container');
+            
+            // Filter active orders (pending, ready, served)
+            const activeOrders = config.orders.filter(order => 
+                ['pending', 'ready', 'served'].includes(order.status)
+            );
+            
+            if (activeOrders.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-receipt" style="font-size: 48px; color: var(--dark-gray); margin-bottom: 20px;"></i>
+                        <p style="color: var(--dark-gray);">No active orders</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div class="grid">';
+            
+            activeOrders.forEach(order => {
+                const items = Array.isArray(order.items) ? order.items : [];
+                const itemCount = items.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
+                
+                html += `
+                    <div class="card order-card ${order.status}">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div>
+                                <h4 style="margin-bottom: 5px; color: var(--secondary);">
+                                    Order #${order.order_id ? order.order_id.substring(0, 8) : 'N/A'}
+                                </h4>
+                                <p style="color: var(--dark-gray); margin-bottom: 5px; font-size: 14px;">
+                                    <i class="fas fa-table"></i> Table ${order.table_no || 'N/A'}
+                                </p>
+                                <p style="color: var(--dark-gray); font-size: 14px;">
+                                    <i class="fas fa-clock"></i> ${order.timestamp ? formatTime(order.timestamp) : 'N/A'}
+                                </p>
+                            </div>
+                            <span class="status-badge status-${order.status}">
+                                ${order.status ? order.status.toUpperCase() : 'UNKNOWN'}
+                            </span>
+                        </div>
+                        
+                        <div style="margin: 15px 0;">
+                            <p style="color: var(--secondary-light);">
+                                <i class="fas fa-utensils"></i> ${itemCount} items
+                            </p>
+                            <p style="font-weight: bold; color: var(--primary); font-size: 18px;">
+                                Total: ₹${parseFloat(order.total_amount || 0).toFixed(2)}
+                            </p>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-primary btn-small" onclick="viewOrder('${order.order_id}')">
+                                <i class="fas fa-eye"></i> Details
+                            </button>
+                            
+                            ${order.status === 'pending' ? `
+                                <button class="btn btn-success btn-small" onclick="markOrderReady('${order.order_id}')">
+                                    <i class="fas fa-check"></i> Ready
+                                </button>
+                            ` : order.status === 'ready' ? `
+                                <button class="btn btn-warning btn-small" onclick="markOrderServed('${order.order_id}')">
+                                    <i class="fas fa-check-double"></i> Served
+                                </button>
+                            ` : ''}
+                            
+                            ${order.payment_status !== 'paid' ? `
+                                <button class="btn btn-danger btn-small" onclick="processPaymentForOrder('${order.order_id}')">
+                                    <i class="fas fa-credit-card"></i> Payment
+                                </button>
+                            ` : `
+                                <button class="btn btn-small" style="background: #d4edda; color: #155724;" disabled>
+                                    <i class="fas fa-check-circle"></i> Paid
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        async function markOrderServed(orderId) {
+            const result = await callAPIWithPost('updateOrderStatus', {
+                orderId: orderId,
+                status: 'served'
+            });
+            
+            if (result && result.success) {
+                showNotification('Order marked as served');
+                refreshTables();
+                refreshOrders();
+                refreshKDS();
+            } else {
+                showNotification(result?.message || 'Failed to update order', 'error');
+            }
+        }
+        
+        // KDS Functions
+        async function refreshKDS() {
+            const container = document.getElementById('kds-container');
+            container.innerHTML = '<div class="loading" style="margin: 40px auto; display: block;"></div>';
+            
+            const result = await callAPIWithPost('getOrders', { 
+                status: config.currentKDSFilter === 'all' ? 'all' : config.currentKDSFilter 
+            });
+            
+            if (result && result.success) {
+                const orders = result.orders || [];
+                renderKDSOrders(orders);
+            } else {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--danger);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px;"></i>
+                        <p>Failed to load kitchen orders</p>
+                        <button class="btn btn-outline" onclick="refreshKDS()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderKDSOrders(orders) {
+            const container = document.getElementById('kds-container');
+            
+            // Filter orders for KDS (pending and ready)
+            const kdsOrders = orders.filter(order => 
+                ['pending', 'ready'].includes(order.status)
+            );
+            
+            if (kdsOrders.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-check-circle" style="font-size: 48px; color: var(--dark-gray); margin-bottom: 20px;"></i>
+                        <p style="color: var(--dark-gray);">No orders in the kitchen</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<div class="grid">';
+            
+            kdsOrders.forEach(order => {
+                const items = Array.isArray(order.items) ? order.items : [];
+                const timeAgo = order.timestamp ? getTimeAgo(order.timestamp) : 'just now';
+                
+                html += `
+                    <div class="card order-card ${order.status}" style="background: ${order.status === 'ready' ? '#f0fff0' : 'white'};">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div>
+                                <h3 style="margin-bottom: 5px; color: var(--secondary);">
+                                    Table ${order.table_no || 'N/A'}
+                                </h3>
+                                <p style="color: var(--dark-gray); font-size: 14px;">
+                                    ${timeAgo} | ${items.length} items
+                                </p>
+                            </div>
+                            <div>
+                                <span class="status-badge status-${order.status}" style="font-size: 14px;">
+                                    ${order.status ? order.status.toUpperCase() : 'PENDING'}
+                                </span>
+                                <div style="text-align: right; margin-top: 5px; font-size: 12px; color: var(--dark-gray);">
+                                    #${order.order_id ? order.order_id.substring(0, 6) : 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="max-height: 200px; overflow-y: auto; margin: 15px 0; padding: 10px; background: var(--light-gray); border-radius: var(--radius);">
+                            ${items.map(item => `
+                                <div style="padding: 8px 0; border-bottom: 1px solid var(--gray);">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <strong style="color: var(--secondary);">${item.quantity}x ${item.name}</strong>
+                                        <span style="color: var(--dark-gray);">₹${((parseFloat(item.price || 0) * parseInt(item.quantity || 0)) || 0).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            ${order.status === 'pending' ? `
+                                <button class="btn btn-success" style="width: 100%;" onclick="markOrderReady('${order.order_id}')">
+                                    <i class="fas fa-check"></i> MARK AS READY
+                                </button>
+                            ` : `
+                                <button class="btn" style="width: 100%; background: var(--success); color: white;" disabled>
+                                    <i class="fas fa-check-circle"></i> READY FOR SERVICE
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        function filterKDSOrders(filter) {
+            config.currentKDSFilter = filter;
+            refreshKDS();
+        }
+        
+        // Checkout Functions
+        async function loadCheckoutData() {
+            const container = document.getElementById('checkout-container');
+            container.innerHTML = '<div class="loading" style="margin: 40px auto; display: block;"></div>';
+            
+            const result = await callAPIWithPost('getOrders', { status: 'all' });
+            
+            if (result && result.success) {
+                const orders = result.orders || [];
+                renderCheckoutData(orders);
+            } else {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--danger);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px;"></i>
+                        <p>Failed to load checkout data</p>
+                        <button class="btn btn-outline" onclick="loadCheckoutData()">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderCheckoutData(orders) {
+            const container = document.getElementById('checkout-container');
+            
+            // Calculate totals
+            const totalOrders = orders.length;
+            const completedOrders = orders.filter(o => o.payment_status === 'paid').length;
+            const pendingOrders = orders.filter(o => o.payment_status !== 'paid').length;
+            
+            let totalRevenue = 0;
+            let todayRevenue = 0;
+            const today = new Date().toDateString();
+            
+            orders.forEach(order => {
+                const orderDate = new Date(order.timestamp).toDateString();
+                const amount = parseFloat(order.total_amount || 0);
+                totalRevenue += amount;
+                
+                if (orderDate === today && order.payment_status === 'paid') {
+                    todayRevenue += amount;
+                }
+            });
+            
+            container.innerHTML = `
+                <div class="grid">
+                    <div class="card">
+                        <h3 style="color: var(--secondary); margin-bottom: 20px;">
+                            <i class="fas fa-chart-line"></i> Today's Summary
+                        </h3>
+                        <div style="margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray);">
+                                <span style="color: var(--secondary-light);">Total Orders Today:</span>
+                                <strong style="color: var(--secondary);">${totalOrders}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray);">
+                                <span style="color: var(--secondary-light);">Completed Orders:</span>
+                                <strong style="color: var(--success);">${completedOrders}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray);">
+                                <span style="color: var(--secondary-light);">Pending Orders:</span>
+                                <strong style="color: var(--warning);">${pendingOrders}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 10px 0; margin-top: 15px; font-size: 18px;">
+                                <span style="color: var(--secondary); font-weight: bold;">Today's Revenue:</span>
+                                <strong style="color: var(--primary);">₹${todayRevenue.toFixed(2)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3 style="color: var(--secondary); margin-bottom: 20px;">
+                            <i class="fas fa-credit-card"></i> Quick Actions
+                        </h3>
+                        <div style="margin-top: 15px;">
+                            <button class="btn btn-success" style="width: 100%; margin-bottom: 10px;" onclick="viewAllOrders()">
+                                <i class="fas fa-list"></i> View All Orders
+                            </button>
+                            <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" onclick="generateDailyReport()">
+                                <i class="fas fa-file-pdf"></i> Generate Report
+                            </button>
+                            <button class="btn btn-warning" style="width: 100%;" onclick="viewTransactions()">
+                                <i class="fas fa-history"></i> View Transactions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card" style="margin-top: 20px;">
+                    <h3 style="color: var(--secondary); margin-bottom: 20px;">
+                        <i class="fas fa-table"></i> Table Status Overview
+                    </h3>
+                    <div style="margin-top: 15px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                            <div style="width: 20px; height: 20px; background: var(--success); margin-right: 10px; border-radius: 3px;"></div>
+                            <span style="color: var(--secondary-light);">Vacant Tables: ${config.tables.filter(t => t.status === 'vacant').length}</span>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 20px; height: 20px; background: var(--danger); margin-right: 10px; border-radius: 3px;"></div>
+                            <span style="color: var(--secondary-light);">Occupied Tables: ${config.tables.filter(t => t.status === 'occupied').length}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function viewAllOrders() {
+            switchTab('orders');
+        }
+        
+        function generateDailyReport() {
+            const orders = config.orders.filter(o => {
+                const orderDate = new Date(o.timestamp).toDateString();
+                const today = new Date().toDateString();
+                return orderDate === today;
+            });
+            
+            let report = `Daily Report - ${new Date().toLocaleDateString()}\n`;
+            report += `=================================\n\n`;
+            report += `Total Orders: ${orders.length}\n`;
+            report += `Total Revenue: ₹${orders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0).toFixed(2)}\n\n`;
+            report += `Order Details:\n`;
+            report += `--------------\n`;
+            
+            orders.forEach((order, index) => {
+                report += `${index + 1}. Order #${order.order_id.substring(0, 8)} - Table ${order.table_no}\n`;
+                report += `   Status: ${order.status} | Payment: ${order.payment_status}\n`;
+                report += `   Total: ₹${parseFloat(order.total_amount || 0).toFixed(2)}\n\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `daily-report-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showNotification('Daily report generated');
+        }
+        
+        function viewTransactions() {
+            showNotification('Transaction history feature in development', 'info');
         }
         
         // Utility Functions
