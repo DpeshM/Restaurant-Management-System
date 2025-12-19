@@ -1105,6 +1105,7 @@
         }
         
         // API Functions - FIXED VERSION
+        // Unified API Function for Google Apps Script
         async function callAPI(action, params = {}) {
             if (!config.apiUrl) {
                 showNotification('Please configure API URL first', 'error');
@@ -1112,40 +1113,57 @@
                 return null;
             }
             
-            const url = config.apiUrl;
-            const formData = new FormData();
-            formData.append('action', action);
-            
-            // Add all parameters to formData
-            for (const key in params) {
-                if (params[key] !== undefined && params[key] !== null) {
-                    if (typeof params[key] === 'object') {
-                        formData.append(key, JSON.stringify(params[key]));
-                    } else {
-                        formData.append(key, params[key].toString());
+            try {
+                // Build URL with parameters for GET request (Google Apps Script compatible)
+                let url = `${config.apiUrl}?action=${encodeURIComponent(action)}`;
+                
+                for (const key in params) {
+                    if (params[key] !== undefined && params[key] !== null) {
+                        const value = typeof params[key] === 'object' 
+                            ? JSON.stringify(params[key]) 
+                            : params[key];
+                        url += `&${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
                     }
                 }
-            }
-            
-            try {
+                
                 console.log('Calling API:', action, params);
+                
                 const response = await fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    mode: 'no-cors' // Important for Google Apps Script
+                    method: 'GET',
+                    redirect: 'follow'
                 });
                 
-                // With no-cors mode, we can't read the response
-                // But Google Apps Script will process it
-                return { success: true, message: 'Request sent successfully' };
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const text = await response.text();
+                console.log('API Response:', text);
+                
+                // Try to parse JSON response
+                try {
+                    const data = JSON.parse(text);
+                    return data;
+                } catch (e) {
+                    // If not JSON, return success with text
+                    console.warn('Response not JSON:', text);
+                    return { 
+                        success: true, 
+                        message: text || 'Operation completed',
+                        rawResponse: text
+                    };
+                }
                 
             } catch (error) {
                 console.error('API Error:', error);
                 showNotification('API Error: ' + error.message, 'error');
-                return { success: false, message: error.message };
+                return { 
+                    success: false, 
+                    message: error.message,
+                    error: error
+                };
             }
         }
-        
         // Alternative API call for Google Apps Script
         async function callAPIWithScript(action, params = {}) {
             if (!config.apiUrl) {
