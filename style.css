@@ -47,7 +47,7 @@ header {
     gap: 15px;
 }
 
-#current-time {
+.time-display {
     font-size: 14px;
     color: #ccc;
 }
@@ -104,6 +104,23 @@ header {
     display: block;
 }
 
+.section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #ff9700;
+}
+
+.section-title h2 {
+    color: #000;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -123,6 +140,12 @@ header {
 
 /* Grid */
 .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 15px;
@@ -201,6 +224,39 @@ header {
 
 .btn-refresh:hover {
     background: #1976d2;
+}
+
+.btn-primary {
+    background: #ff9700;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #ff8c00;
+}
+
+.btn-success {
+    background: #4caf50;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: #388e3c;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #ff9700;
+    color: #ff9700;
+}
+
+.btn-outline:hover {
+    background: #ff9700;
+    color: #fff;
+}
+
+.table-card {
+    cursor: pointer;
 }
 
 .btn-settings {
@@ -285,6 +341,18 @@ header {
 }
 
 .close:hover {
+    color: #ff9700;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.close-btn:hover {
     color: #ff9700;
 }
 
@@ -376,6 +444,19 @@ header {
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    background: #4caf50;
+    color: #fff;
+    border-radius: 5px;
+    display: none;
+    z-index: 1001;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
 #notification.error {
     background: #f44336;
 }
@@ -398,6 +479,22 @@ header {
 }
 
 .menu-item:hover {
+    background: #f9f9f9;
+}
+
+.menu-item-select {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.menu-item-select:last-child {
+    border-bottom: none;
+}
+
+.menu-item-select:hover {
     background: #f9f9f9;
 }
 
