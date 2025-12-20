@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Management System</title>
+  <script type="module" crossorigin src="/assets/index-B935L1Ws.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-T2R5y_Y7.css">
+</head>
+<body>
+    <header>
+        <div class="logo">Restaurant Pro</div>
+        <div class="header-right">
+            <div class="time-display" id="currentTime"></div>
+            <button class="btn btn-settings" onclick="openSettingsModal()">⚙️ Settings</button>
+        </div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('tables')">📊 Tables</button>
+        <button class="tab" onclick="switchTab('menu')">📋 Menu</button>
+        <button class="tab" onclick="switchTab('kitchen')">👨‍🍳 Kitchen</button>
+        <button class="tab" onclick="switchTab('checkout')">💰 Checkout</button>
+    </div>
+
+    <div id="tables" class="tab-content active">
+        <div class="section-title">
+            <h2>📊 Table Management</h2>
+            <div>
+                <button class="btn btn-primary" onclick="openAddTableModal()">+ Add Table</button>
+                <button class="btn btn-outline" onclick="refreshTables()">🔄 Refresh</button>
+            </div>
+        </div>
+        <div class="cards-grid" id="tablesList"></div>
+    </div>
+
+    <div id="menu" class="tab-content">
+        <div class="section-title">
+            <h2>📋 Menu Management</h2>
+            <div>
+                <button class="btn btn-primary" onclick="openAddMenuItemModal()">+ Add Item</button>
+                <button class="btn btn-outline" onclick="refreshMenu()">🔄 Refresh</button>
+            </div>
+        </div>
+        <div id="menuList"></div>
+    </div>
+
+    <div id="kitchen" class="tab-content">
+        <div class="section-title">
+            <h2>👨‍🍳 Kitchen Display</h2>
+            <div>
+                <button class="btn" onclick="filterOrders('pending')">⏳ Pending</button>
+                <button class="btn btn-success" onclick="filterOrders('ready')">✅ Ready</button>
+                <button class="btn btn-outline" onclick="filterOrders('all')">📋 All</button>
+            </div>
+        </div>
+        <div id="kitchenOrders" class="cards-grid"></div>
+    </div>
+
+    <div id="checkout" class="tab-content">
+        <div class="section-title">
+            <h2>💰 Checkout & Payment</h2>
+            <div>
+                <button class="btn btn-primary" onclick="refreshCheckout()">🔄 Refresh</button>
+                <button class="btn btn-success" onclick="generateDailyReport()">📊 Daily Report</button>
+            </div>
+        </div>
+        <div id="checkoutContent"></div>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Settings</h3>
+                <button class="close-btn" onclick="closeModal('settingsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Restaurant Name:</label>
+                    <input type="text" id="restaurantName" placeholder="Enter restaurant name">
+                </div>
+                <div class="form-group">
+                    <label>Google Sheets Webhook URL (Optional):</label>
+                    <input type="text" id="googleSheetsWebhook" placeholder="https://script.google.com/macros/s/.../exec">
+                    <small style="color: #666;">Get from Google Apps Script → Deploy → Web App URL</small>
+                </div>
+                <button class="btn btn-primary" onclick="saveSettings()" style="width: 100%;">💾 Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addTableModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Add Table</h3>
+                <button class="close-btn" onclick="closeModal('addTableModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Table Number:</label>
+                    <input type="text" id="tableNumber" placeholder="T01">
+                </div>
+                <div class="form-group">
+                    <label>Capacity:</label>
+                    <input type="number" id="tableCapacity" value="4">
+                </div>
+                <button class="btn btn-primary" onclick="addTable()" style="width: 100%;">✅ Add Table</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addMenuItemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Add Menu Item</h3>
+                <button class="close-btn" onclick="closeModal('addMenuItemModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Item Name:</label>
+                    <input type="text" id="itemName" placeholder="e.g., Burger">
+                </div>
+                <div class="form-group">
+                    <label>Category:</label>
+                    <input type="text" id="itemCategory" placeholder="e.g., Main Course">
+                </div>
+                <div class="form-group">
+                    <label>Price (₹):</label>
+                    <input type="number" id="itemPrice" placeholder="100">
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea id="itemDescription" rows="3" placeholder="Item description"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="addMenuItem()" style="width: 100%;">✅ Add Menu Item</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="createOrderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="orderTableTitle">➕ Create Order</h3>
+                <button class="close-btn" onclick="closeModal('createOrderModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="menuItemsSelection"></div>
+                <div id="selectedItemsSummary" style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
+                    <h4>Selected Items:</h4>
+                    <div id="selectedItemsList">No items selected</div>
+                    <div id="orderTotal" style="font-weight: bold; font-size: 18px; margin-top: 10px;">Total: ₹0</div>
+                </div>
+                <button class="btn btn-success" onclick="sendOrderToKitchen()" style="width: 100%; margin-top: 20px;">🚀 Send to Kitchen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💳 Payment</h3>
+                <button class="close-btn" onclick="closeModal('paymentModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="paymentContent"></div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+</body>
+</html>
